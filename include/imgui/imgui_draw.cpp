@@ -1,4 +1,4 @@
-// dear imgui, v1.85 WIP
+// dear imgui, v1.85
 // (drawing and font code)
 
 /*
@@ -27,6 +27,7 @@ Index of this file:
 #endif
 
 #include "imgui.h"
+#include "imgui_spectrum.h"
 #ifndef IMGUI_DISABLE
 
 #ifndef IMGUI_DEFINE_MATH_OPERATORS

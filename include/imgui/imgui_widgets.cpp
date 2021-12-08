@@ -1,4 +1,4 @@
-// dear imgui, v1.85 WIP
+// dear imgui, v1.85
 // (widgets code)
 
 /*
@@ -33,6 +33,8 @@ Index of this file:
 #endif
 
 #include "imgui.h"
+#include "imgui_spectrum.h"
+
 #ifndef IMGUI_DISABLE
 
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
@@ -698,10 +700,9 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     RenderNavHighlight(bb, id);
     RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
-
     if (g.LogEnabled)
         LogSetNextTextDecoration("[", "]");
-    RenderTextClipped(bb.Min + style.FramePadding, bb.Max - style.FramePadding, label, NULL, &label_size, style.ButtonTextAlign, &bb);
+    RenderTextClipped(bb.Min + style.FramePadding, bb.Max - style.FramePadding, label, NULL, &label_size, style.ButtonTextAlign, &bb, GetColorU32(ImGuiCol_Text));
 
     // Automatically close popups
     //if (pressed && !(flags & ImGuiButtonFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))
@@ -1098,27 +1099,42 @@ bool ImGui::Checkbox(const char* label, bool* v)
 
     const ImRect check_bb(pos, pos + ImVec2(square_sz, square_sz));
     RenderNavHighlight(total_bb, id);
-    RenderFrame(check_bb.Min, check_bb.Max, GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
-    ImU32 check_col = GetColorU32(ImGuiCol_CheckMark);
+
+    // ImGui-Spectrum changes start here
+    const ImVec2 offset(style.FramePadding.y, style.FramePadding.y);
+    const ImRect check2_bb(check_bb.Min + offset, check_bb.Max - offset);
+    const float check_sz = ImMin(check2_bb.GetWidth(), check2_bb.GetHeight());
+    const float pad = ImMax(1.0f, (float)(int)(check_sz / 3.0f));
+
     bool mixed_value = (g.LastItemData.InFlags & ImGuiItemFlags_MixedValue) != 0;
     if (mixed_value)
     {
         // Undocumented tristate/mixed/indeterminate checkbox (#2644)
         // This may seem awkwardly designed because the aim is to make ImGuiItemFlags_MixedValue supported by all widgets (not just checkbox)
-        ImVec2 pad(ImMax(1.0f, IM_FLOOR(square_sz / 3.6f)), ImMax(1.0f, IM_FLOOR(square_sz / 3.6f)));
-        window->DrawList->AddRectFilled(check_bb.Min + pad, check_bb.Max - pad, check_col, style.FrameRounding);
-    }
+        // (same frame as the checked state)
+        RenderFrame(check2_bb.Min, check2_bb.Max, (held && hovered) ? Spectrum::BLUE700 : hovered ? Spectrum::BLUE600 : Spectrum::BLUE500, false, Spectrum::CHECKBOX_ROUNDING);
+        const ImVec2 line_size = ImVec2(check2_bb.GetWidth() / 2 - style.ItemInnerSpacing.x, 1.5f);
+        RenderFrame(check2_bb.GetCenter() - line_size, check2_bb.GetCenter() + line_size, Spectrum::GRAY50, false, 2.0f);
+    } 
     else if (*v)
     {
-        const float pad = ImMax(1.0f, IM_FLOOR(square_sz / 6.0f));
-        RenderCheckMark(window->DrawList, check_bb.Min + ImVec2(pad, pad), check_col, square_sz - pad * 2.0f);
+        ImU32 frame_col = (held && hovered) ? Spectrum::BLUE700 : (hovered ? Spectrum::BLUE600 : Spectrum::BLUE500);
+        RenderFrame(check2_bb.Min, check2_bb.Max, frame_col, false, Spectrum::CHECKBOX_ROUNDING); 
+        RenderCheckMark(window->DrawList, check_bb.Min + ImVec2(pad,pad), Spectrum::GRAY50, square_sz - pad*2.0f);
+    } else {
+        ImU32 border_col = (held && hovered) ? Spectrum::GRAY800 : (hovered ? Spectrum::GRAY700 : Spectrum::GRAY600);
+        PushStyleVar(ImGuiStyleVar_FrameBorderSize, Spectrum::CHECKBOX_BORDER_SIZE);
+        PushStyleColor(ImGuiCol_Border, border_col);
+        RenderFrameBorder(check2_bb.Min, check2_bb.Max, Spectrum::CHECKBOX_ROUNDING);
+        PopStyleVar();
+        PopStyleColor();
     }
 
     ImVec2 label_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);
     if (g.LogEnabled)
         LogRenderedText(&label_pos, mixed_value ? "[~]" : *v ? "[x]" : "[ ]");
     if (label_size.x > 0.0f)
-        RenderText(label_pos, label);
+        RenderText(label_pos, label, nullptr, true, hovered ? Spectrum::GRAY900 : Spectrum::GRAY800);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
     return pressed;
@@ -1203,24 +1219,22 @@ bool ImGui::RadioButton(const char* label, bool active)
         MarkItemEdited(id);
 
     RenderNavHighlight(total_bb, id);
-    window->DrawList->AddCircleFilled(center, radius, GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), 16);
     if (active)
     {
-        const float pad = ImMax(1.0f, IM_FLOOR(square_sz / 6.0f));
-        window->DrawList->AddCircleFilled(center, radius - pad, GetColorU32(ImGuiCol_CheckMark), 16);
+        window->DrawList->AddCircleFilled(center, radius * 0.8f, ((held && hovered) ? Spectrum::BLUE700 : hovered ? Spectrum::BLUE600 : Spectrum::BLUE500), 16);
+        window->DrawList->AddCircleFilled(center, radius * 0.25f, Spectrum::GRAY75, 16);
     }
-
-    if (style.FrameBorderSize > 0.0f)
+    else 
     {
-        window->DrawList->AddCircle(center + ImVec2(1, 1), radius, GetColorU32(ImGuiCol_BorderShadow), 16, style.FrameBorderSize);
-        window->DrawList->AddCircle(center, radius, GetColorU32(ImGuiCol_Border), 16, style.FrameBorderSize);
+        window->DrawList->AddCircleFilled(center, radius * 0.8f, ((held && hovered) ? Spectrum::GRAY800 : hovered ? Spectrum::GRAY700: Spectrum::GRAY600), 16);
+        window->DrawList->AddCircleFilled(center, radius * 0.6f, Spectrum::GRAY75, 16);
     }
 
     ImVec2 label_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);
     if (g.LogEnabled)
         LogRenderedText(&label_pos, active ? "(x)" : "( )");
     if (label_size.x > 0.0f)
-        RenderText(label_pos, label);
+        RenderText(label_pos, label, nullptr, true, hovered ? Spectrum::GRAY900 : Spectrum::GRAY800);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
     return pressed;
@@ -1679,8 +1693,10 @@ bool ImGui::BeginComboPopup(ImGuiID popup_id, const ImRect& bb, ImGuiComboFlags 
 
     // We don't use BeginPopupEx() solely because we have a custom name string, which we could make an argument to BeginPopupEx()
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove;
-    PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(g.Style.FramePadding.x, g.Style.WindowPadding.y)); // Horizontally align ourselves with the framed text
+    PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(g.Style.FramePadding.x, g.Style.WindowPadding.y));  // Horizontally align ourselves with the framed text
+    PushStyleVar(ImGuiStyleVar_PopupRounding, 4.0f);
     bool ret = Begin(name, NULL, window_flags);
+    PopStyleVar();
     PopStyleVar();
     if (!ret)
     {
@@ -1688,6 +1704,7 @@ bool ImGui::BeginComboPopup(ImGuiID popup_id, const ImRect& bb, ImGuiComboFlags 
         IM_ASSERT(0);   // This should never happen as we tested for IsPopupOpen() above
         return false;
     }
+    GetCurrentWindow()->DC.IsComboPopup = true;
     return true;
 }
 
@@ -1799,7 +1816,7 @@ bool ImGui::Combo(const char* label, int* current_item, bool (*items_getter)(voi
     bool value_changed = false;
     for (int i = 0; i < items_count; i++)
     {
-        PushID((void*)(intptr_t)i);
+        PushID(i);
         const bool item_selected = (i == *current_item);
         const char* item_text;
         if (!items_getter(data, i, &item_text))
@@ -2407,17 +2424,17 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
     if (!temp_input_is_active)
     {
-        const bool focus_requested = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Focused) != 0;
+        const bool input_requested_by_tabbing = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
         const bool clicked = (hovered && g.IO.MouseClicked[0]);
         const bool double_clicked = (hovered && g.IO.MouseDoubleClicked[0]);
-        if (focus_requested || clicked || double_clicked || g.NavActivateId == id || g.NavActivateInputId == id)
+        if (input_requested_by_tabbing || clicked || double_clicked || g.NavActivateId == id || g.NavActivateInputId == id)
         {
             SetActiveID(id, window);
             SetFocusID(id, window);
             FocusWindow(window);
             g.ActiveIdUsingNavDirMask = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
             if (temp_input_allowed)
-                if (focus_requested || (clicked && g.IO.KeyCtrl) || double_clicked || g.NavActivateInputId == id)
+                if (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || double_clicked || g.NavActivateInputId == id)
                     temp_input_is_active = true;
         }
 
@@ -3025,15 +3042,15 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
     if (!temp_input_is_active)
     {
-        const bool focus_requested = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Focused) != 0;
+        const bool input_requested_by_tabbing = temp_input_allowed && (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
         const bool clicked = (hovered && g.IO.MouseClicked[0]);
-        if (focus_requested || clicked || g.NavActivateId == id || g.NavActivateInputId == id)
+        if (input_requested_by_tabbing || clicked || g.NavActivateId == id || g.NavActivateInputId == id)
         {
             SetActiveID(id, window);
             SetFocusID(id, window);
             FocusWindow(window);
             g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
-            if (temp_input_allowed && (focus_requested || (clicked && g.IO.KeyCtrl) || g.NavActivateInputId == id))
+            if (temp_input_allowed && (input_requested_by_tabbing || (clicked && g.IO.KeyCtrl) || g.NavActivateInputId == id))
                 temp_input_is_active = true;
         }
     }
@@ -4024,21 +4041,19 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // We are only allowed to access the state if we are already the active widget.
     ImGuiInputTextState* state = GetInputTextState(id);
 
-    const bool focus_requested_by_code = (item_status_flags & ImGuiItemStatusFlags_FocusedByCode) != 0;
-    const bool focus_requested_by_tabbing = (item_status_flags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
+    const bool input_requested_by_tabbing = (item_status_flags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
+    const bool input_requested_by_nav = (g.ActiveId != id) && ((g.NavActivateInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_Keyboard));
 
     const bool user_clicked = hovered && io.MouseClicked[0];
-    const bool user_nav_input_start = (g.ActiveId != id) && (g.NavActivateInputId == id || g.NavActivateId == id);
     const bool user_scroll_finish = is_multiline && state != NULL && g.ActiveId == 0 && g.ActiveIdPreviousFrame == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
     const bool user_scroll_active = is_multiline && state != NULL && g.ActiveId == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
-
     bool clear_active_id = false;
-    bool select_all = (g.ActiveId != id) && ((flags & ImGuiInputTextFlags_AutoSelectAll) != 0 || user_nav_input_start) && (!is_multiline);
+    bool select_all = false;
 
     float scroll_y = is_multiline ? draw_window->Scroll.y : FLT_MAX;
 
     const bool init_changed_specs = (state != NULL && state->Stb.single_line != !is_multiline);
-    const bool init_make_active = (user_clicked || user_scroll_finish || user_nav_input_start || focus_requested_by_code || focus_requested_by_tabbing);
+    const bool init_make_active = (user_clicked || user_scroll_finish || input_requested_by_nav || input_requested_by_tabbing);
     const bool init_state = (init_make_active || user_scroll_active);
     if ((init_state && g.ActiveId != id) || init_changed_specs)
     {
@@ -4074,13 +4089,20 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             state->ID = id;
             state->ScrollX = 0.0f;
             stb_textedit_initialize_state(&state->Stb, !is_multiline);
-            if (!is_multiline && focus_requested_by_code)
+        }
+
+        if (!is_multiline)
+        {
+            if (flags & ImGuiInputTextFlags_AutoSelectAll)
+                select_all = true;
+            if (input_requested_by_nav && (!recycle_state || !(g.NavActivateFlags & ImGuiActivateFlags_TryToPreserveState)))
+                select_all = true;
+            if (input_requested_by_tabbing || (user_clicked && io.KeyCtrl))
                 select_all = true;
         }
+
         if (flags & ImGuiInputTextFlags_AlwaysOverwrite)
             state->Stb.insert_mode = 1; // stb field name is indeed incorrect (see #2863)
-        if (!is_multiline && (focus_requested_by_tabbing || (user_clicked && io.KeyCtrl)))
-            select_all = true;
     }
 
     if (g.ActiveId != id && init_make_active)
@@ -4113,7 +4135,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
     // Lock the decision of whether we are going to take the path displaying the cursor or selection
     const bool render_cursor = (g.ActiveId == id) || (state && user_scroll_active);
-    bool render_selection = state && state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
+    bool render_selection = state && (state->HasSelection() || select_all) && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
     bool value_changed = false;
     bool enter_pressed = false;
 
@@ -4214,7 +4236,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // We ignore CTRL inputs, but need to allow ALT+CTRL as some keyboards (e.g. German) use AltGR (which _is_ Alt+Ctrl) to input certain characters.
         if (io.InputQueueCharacters.Size > 0)
         {
-            if (!ignore_char_inputs && !is_readonly && !user_nav_input_start)
+            if (!ignore_char_inputs && !is_readonly && !input_requested_by_nav)
                 for (int n = 0; n < io.InputQueueCharacters.Size; n++)
                 {
                     // Insert character if they pass filtering
@@ -5969,15 +5991,16 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
 
         if (g.LogEnabled)
             LogSetNextTextDecoration("###", "###");
-        RenderTextClipped(text_pos, frame_bb.Max, label, label_end, &label_size);
+        RenderTextClipped(text_pos, frame_bb.Max, label, label_end, &label_size, ImVec2(0, 0), nullptr, Spectrum::GRAY50);
     }
     else
     {
         // Unframed typed for tree nodes
         if (hovered || selected)
         {
-            const ImU32 bg_col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
+            const ImU32 bg_col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header, 0.15f);
             RenderFrame(frame_bb.Min, frame_bb.Max, bg_col, false);
+            window->DrawList->AddRect(frame_bb.Min, frame_bb.Max, bg_col);
         }
         RenderNavHighlight(frame_bb, id, nav_highlight_flags);
         if (flags & ImGuiTreeNodeFlags_Bullet)
@@ -6017,7 +6040,7 @@ void ImGui::TreePushOverrideID(ImGuiID id)
     ImGuiWindow* window = g.CurrentWindow;
     Indent();
     window->DC.TreeDepth++;
-    window->IDStack.push_back(id);
+    PushOverrideID(id);
 }
 
 void ImGui::TreePop()
@@ -6238,9 +6261,24 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     // Render
     if (held && (flags & ImGuiSelectableFlags_DrawHoveredWhenHeld))
         hovered = true;
-    if (hovered || selected)
+
+    if (window->DC.IsComboPopup) { // ImGui-Spectrum: change Selectable rendering for ComboBox and ListBox
+
+        if (hovered) {
+            RenderFrame(bb.Min, bb.Max, Spectrum::color_alpha(0x0A, Spectrum::Static::GRAY900), false, 0.0f);
+            RenderNavHighlight(bb, id, ImGuiNavHighlightFlags_TypeThin | ImGuiNavHighlightFlags_NoRounding);
+        }
+
+        if (selected) { // add a checkmark and text is blue
+            float height = bb.GetHeight();
+            RenderCheckMark(window->DrawList, ImVec2(bb.Max.x - height, bb.GetCenter().y - height / 2),
+                Spectrum::BLUE600, height / 3.0f * 2.0f);
+            PushStyleColor(ImGuiCol_Text, Spectrum::BLUE600);
+        }
+
+    } else if (hovered || selected)
     {
-        const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
+        const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header, 0.25f);
         RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
     }
     RenderNavHighlight(bb, id, ImGuiNavHighlightFlags_TypeThin | ImGuiNavHighlightFlags_NoRounding);
@@ -6251,6 +6289,8 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         TablePopBackgroundChannel();
 
     RenderTextClipped(text_min, text_max, label, NULL, &label_size, style.SelectableTextAlign, &bb);
+    if (flags & ImGuiSelectableFlags_Disabled) PopStyleColor();
+    if (window->DC.IsComboPopup && selected) PopStyleColor(); // ImGui-Spectrum: undo blue color from above
 
     // Automatically close popups
     if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_DontClosePopups) && !(g.LastItemData.InFlags & ImGuiItemFlags_SelectableDontClosePopup))
@@ -6319,6 +6359,7 @@ bool ImGui::BeginListBox(const char* label, const ImVec2& size_arg)
     }
 
     BeginChildFrame(id, frame_bb.GetSize());
+    GetCurrentWindow()->DC.IsComboPopup = true;
     return true;
 }
 
@@ -6716,7 +6757,7 @@ void ImGui::EndMenuBar()
             SetNavID(window->NavLastIds[layer], layer, 0, window->NavRectRel[layer]);
             g.NavDisableHighlight = true; // Hide highlight for the current frame so we don't see the intermediary selection.
             g.NavDisableMouseHover = g.NavMousePosDirty = true;
-            NavMoveRequestForward(g.NavMoveDir, g.NavMoveClipDir, g.NavMoveFlags); // Repeat
+            NavMoveRequestForward(g.NavMoveDir, g.NavMoveClipDir, g.NavMoveFlags, g.NavMoveScrollFlags); // Repeat
         }
     }
 
@@ -7874,9 +7915,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
     if (p_open && !*p_open)
     {
-        PushItemFlag(ImGuiItemFlags_NoNav | ImGuiItemFlags_NoNavDefaultFocus, true);
-        ItemAdd(ImRect(), id);
-        PopItemFlag();
+        ItemAdd(ImRect(), id, NULL, ImGuiItemFlags_NoNav | ImGuiItemFlags_NoNavDefaultFocus);
         return false;
     }
 
@@ -7943,9 +7982,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     // and then gets submitted again, the tabs will have 'tab_appearing=true' but 'tab_is_new=false'.
     if (tab_appearing && (!tab_bar_appearing || tab_is_new))
     {
-        PushItemFlag(ImGuiItemFlags_NoNav | ImGuiItemFlags_NoNavDefaultFocus, true);
-        ItemAdd(ImRect(), id);
-        PopItemFlag();
+        ItemAdd(ImRect(), id, NULL, ImGuiItemFlags_NoNav | ImGuiItemFlags_NoNavDefaultFocus);
         if (is_tab_button)
             return false;
         return tab_contents_visible;

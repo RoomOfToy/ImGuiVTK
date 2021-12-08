@@ -1,5 +1,8 @@
 #include <vtkSmartPointer.h>
 #include <vtkActor.h>
+
+// use Adobe spectrum ImGUI fork
+#include "imgui_spectrum.h"  // use light theme in default
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -50,8 +53,9 @@ int main(int argc, char* argv[])
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
     // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
+    ImGui::Spectrum::StyleColorsSpectrum();
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);

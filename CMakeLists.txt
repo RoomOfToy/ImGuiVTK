@@ -28,6 +28,10 @@ find_package(VTK COMPONENTS
   vtkInteractionWidgets
   QUIET
 )
+if (NOT VTK_FOUND)
+  message("Skipping ImGuiVTK: ${VTK_NOT_FOUND_MESSAGE}")
+  return()
+endif()
 message(STATUS "VTK_VERSION: ${VTK_VERSION}")
 
 # glfw
@@ -62,21 +66,34 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/include
 )
 
-add_executable(ImGuiVTK_test 
-  ${PROJECT_SOURCE_DIR}/src/ImGuiVTK_test.cpp
+# ImGuiVTK source files
+set(ImGuiVTK_SRC_Files
   ${PROJECT_SOURCE_DIR}/src/ImGuiVTK.cpp
   ${PROJECT_SOURCE_DIR}/include/glad/glad.c
   ${PROJECT_SOURCE_DIR}/include/imgui/imgui.cpp
+  ${PROJECT_SOURCE_DIR}/include/imgui/imgui_spectrum.cpp
   ${PROJECT_SOURCE_DIR}/include/imgui/imgui_draw.cpp
   ${PROJECT_SOURCE_DIR}/include/imgui/imgui_tables.cpp
   ${PROJECT_SOURCE_DIR}/include/imgui/imgui_widgets.cpp
   ${PROJECT_SOURCE_DIR}/include/imgui/backends/imgui_impl_glfw.cpp
-  ${PROJECT_SOURCE_DIR}/include/imgui/backends/imgui_impl_opengl3.cpp)
+  ${PROJECT_SOURCE_DIR}/include/imgui/backends/imgui_impl_opengl3.cpp
+)
+
+add_executable(ImGuiVTK_test 
+  ${PROJECT_SOURCE_DIR}/src/ImGuiVTK_test.cpp
+  ${ImGuiVTK_SRC_Files}
+)
 target_link_libraries (
   ImGuiVTK_test
   ${GLFW3}
   OpenGL::GL
   ${VTK_LIBRARIES}
+)
+# use spectrum dark theme
+target_compile_definitions(
+  ImGuiVTK_test
+  PRIVATE
+  SPECTRUM_USE_DARK_THEME
 )
 # vtk_module_autoinit is needed
 vtk_module_autoinit(
