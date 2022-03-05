@@ -26,6 +26,7 @@ find_package(VTK COMPONENTS
   vtkRenderingVolumeOpenGL2
   vtkRenderingAnnotation
   vtkInteractionWidgets
+  vtkImagingSources
   QUIET
 )
 if (NOT VTK_FOUND)
@@ -98,5 +99,27 @@ target_compile_definitions(
 # vtk_module_autoinit is needed
 vtk_module_autoinit(
   TARGETS ImGuiVTK_test
+  MODULES ${VTK_LIBRARIES}
+)
+
+add_executable(MappingMeshToImg 
+  ${PROJECT_SOURCE_DIR}/src/mapping_mesh_to_img.cpp
+  ${ImGuiVTK_SRC_Files}
+)
+target_link_libraries (
+  MappingMeshToImg
+  ${GLFW3}
+  OpenGL::GL
+  ${VTK_LIBRARIES}
+)
+# use spectrum dark theme
+target_compile_definitions(
+  MappingMeshToImg
+  PRIVATE
+  SPECTRUM_USE_DARK_THEME
+)
+# vtk_module_autoinit is needed
+vtk_module_autoinit(
+  TARGETS MappingMeshToImg
   MODULES ${VTK_LIBRARIES}
 )
