@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     // file browser
     ImGui::FileBrowser fileDialog;
     fileDialog.SetTitle("FileSelection");
-    fileDialog.SetTypeFilters({ ".stl", "obj" });  // mesh for volume rendering
+    fileDialog.SetTypeFilters({ ".stl", ".obj" });  // mesh for volume rendering
 
     // Our state
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);

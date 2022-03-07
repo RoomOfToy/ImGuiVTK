@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
     imgFileDialog.SetTypeFilters({ ".jpg", "jpeg", ".bmp", ".png", ".tif", ".pnm" });
     ImGui::FileBrowser meshFileDialog;
     meshFileDialog.SetTitle("MeshFileSelection");
-    meshFileDialog.SetTypeFilters({ ".stl", "obj" });
+    meshFileDialog.SetTypeFilters({ ".stl", ".obj" });
 
     // Our state
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
