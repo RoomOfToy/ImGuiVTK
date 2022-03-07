@@ -42,9 +42,17 @@ void SetupModelRender(vtkSmartPointer<vtkRenderer> modelRenderer, vtkSmartPointe
     modelRenderer->GetRenderWindow()->GetInteractor()->GetInteractorStyle()->SetDefaultRenderer(modelRenderer);
 }
 
+
+struct SceneAndBackground
+{
+    vtkRenderer* SceneRenderer = nullptr;
+    vtkRenderer* BackgroundRenderer = nullptr;
+    vtkActor* SceneActor = nullptr;
+    vtkImageActor* BackgroundActor = nullptr;
+};
+
 // scene: render 2, background: render 1
-// return scene renderer
-vtkSmartPointer<vtkRenderer> SetupSceneAndBackgroundRenders(vtkSmartPointer<vtkGenericOpenGLRenderWindow> renderWindow, vtkSmartPointer<vtkImageData> imgData, vtkSmartPointer<vtkPolyData> meshData)
+SceneAndBackground SetupSceneAndBackgroundRenders(vtkSmartPointer<vtkGenericOpenGLRenderWindow> renderWindow, vtkSmartPointer<vtkImageData> imgData, vtkSmartPointer<vtkPolyData> meshData)
 {
     // Create an image actor to display the image
     vtkNew<vtkImageActor> imgActor;
@@ -113,5 +121,5 @@ vtkSmartPointer<vtkRenderer> SetupSceneAndBackgroundRenders(vtkSmartPointer<vtkG
     // Render again to set the correct view
     renderWindow->Render();
 
-    return sceneRenderer;
+    return SceneAndBackground{ sceneRenderer, backgroundRenderer, meshActor, imgActor };
 }
