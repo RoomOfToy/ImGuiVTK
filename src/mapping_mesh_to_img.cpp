@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 
     // Create window with graphics context
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Main Window", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "Annotation Tool", NULL, NULL);
     if (window == NULL)
         return 1;
     glfwMakeContextCurrent(window);
@@ -82,14 +82,18 @@ int main(int argc, char* argv[])
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     ImVec2 button_size(ImGui::GetFontSize() * 7.0f, 0.0f);
 
-    std::string MeshFileName, ImgFileName;
+    std::string MeshFileName{}, ImgFileName{};
     vtkSmartPointer<vtkPolyData> PolyData = nullptr;
     vtkSmartPointer<vtkImageData> ImgData = nullptr;
-    SceneAndBackground SceneAndImg;
+    SceneAndBackground SceneAndImg{};
+    bool MeshChanged = false;
 
     float inplane_rot_angle = 0, current_roll = 0;
     float zoom = 1, last_zoom = 1;
     float camera_move_resolution = 1, model_move_resolution = 1;
+    float model_opacity = 0.5;
+    ImVec4 model_color = ImVec4(0.00f, 0.00f, 1.00f, 1.00f);
+    bool truncated = false, occluded = false;
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -112,15 +116,32 @@ int main(int argc, char* argv[])
         meshFileDialog.Display();
         if (meshFileDialog.HasSelected())
         {
-            // clean up old props
-            if (props->GetNumberOfItems() != 0) instance.RemoveProps(props);
-            // Setup actor pipeline
-            MeshFileName = meshFileDialog.GetSelected().string();
-            PolyData = ReadPolyData(MeshFileName.c_str());
-            SetupModelRender(instance.Renderer, PolyData);
+            // setup
+            if (MeshFileName.empty())
+            {
+                MeshFileName = meshFileDialog.GetSelected().string();
+                MeshChanged = true;
+            }
+            else  // change the mesh
+            {
+                auto tmp = meshFileDialog.GetSelected().string();
+                if (MeshFileName != tmp)
+                {
+                    MeshFileName = tmp;
+                    MeshChanged = true;
+                }
+                else
+                    MeshChanged = false;
+            }
+            if (MeshChanged)
+            {
+                PolyData = ReadPolyData(MeshFileName.c_str());
+                SetupModelRender(instance.Renderer, PolyData);
+                // replace scene mesh only if the scene has been setup
+                if (SceneAndImg.SceneActor != nullptr)
+                    ChangeTheModel(SceneAndImg, PolyData);
+            }
             // TODO: setup two renderers on ImGuiVTK instance.init() and make change mesh / image easier (one props for one)
-            //props = SetupMyActorsForRayCast(FileName, ImgData, static_cast<VolumeType>(CurrentRayCastType), SampleDistance, ImgSampleDistance, Iso1, Iso2, color1, color2);
-            instance.AddProps(props);
             meshFileDialog.ClearSelected();
         }
         if (ImGui::Begin("ImgFileBrowser"))
@@ -133,16 +154,17 @@ int main(int argc, char* argv[])
         imgFileDialog.Display();
         if (imgFileDialog.HasSelected())
         {
-            // clean up old props
-            if (props->GetNumberOfItems() != 0) instance.RemoveProps(props);
-            // Setup actor pipeline
             ImgFileName = imgFileDialog.GetSelected().string();
             ImgData = ReadImageData(ImgFileName.c_str());
-            //props = SetupMyActorsForRayCast(FileName, ImgData, static_cast<VolumeType>(CurrentRayCastType), SampleDistance, ImgSampleDistance, Iso1, Iso2, color1, color2);
-            SceneAndImg = SetupSceneAndBackgroundRenders(instance.RenderWindow, ImgData, PolyData);
+            // setup
+            if (SceneAndImg.BackgroundActor == nullptr)
+                SceneAndImg = SetupSceneAndBackgroundRenders(instance.RenderWindow, ImgData, PolyData);
+            else // replace the background image
+            {
+                ChangeTheBackgroundImage(SceneAndImg, ImgData);
+            }
             // first let the scene camera follows the model camera
             SceneAndImg.SceneRenderer->SetActiveCamera(instance.Renderer->GetActiveCamera());
-            instance.AddProps(props);
             imgFileDialog.ClearSelected();
         }
 
@@ -155,21 +177,7 @@ int main(int argc, char* argv[])
                 if (ImGui::Button("Lock Overlay"))
                 {
                     vtkNew<vtkCamera> new_camera;
-
                     new_camera->DeepCopy(instance.Renderer->GetActiveCamera());  // make a deep copy to break the camera dependecy of two renderers
-
-                    // auto camera = instance.Renderer->GetActiveCamera();
-                    // double v[3], u[2];
-                    // camera->GetFocalPoint(v);
-                    // new_camera->SetFocalPoint(v);
-                    // camera->GetPosition(v);
-                    // new_camera->SetPosition(v);
-                    // camera->GetViewUp(v);
-                    // new_camera->SetViewUp(v);
-                    // new_camera->SetViewAngle(camera->GetViewAngle());
-                    // camera->GetClippingRange(u);
-                    // new_camera->SetClippingRange(u);
-
                     SceneAndImg.SceneRenderer->SetActiveCamera(new_camera);
                     current_roll = new_camera->GetRoll();
                 }
@@ -179,6 +187,24 @@ int main(int argc, char* argv[])
                     SceneAndImg.SceneRenderer->SetActiveCamera(instance.Renderer->GetActiveCamera());
                 }
                 ImGui::PopStyleColor(1);
+
+                ImGui::Dummy(ImVec2(0.0f, 20.0f));
+
+                // scene model opacity
+                if (ImGui::SliderFloat("Model Opacity", &model_opacity, 0.1f, 1.0f))
+                {
+                    SceneAndImg.SceneActor->GetProperty()->SetOpacity(model_opacity);
+                }
+
+                ImGui::Dummy(ImVec2(0.0f, 20.0f));
+
+                // scene model color adjustment
+                if (ImGui::ColorEdit3("Model Color", (float*)&model_color))
+                {
+                    double color[3] = { model_color.x, model_color.y, model_color.z };
+                    SceneAndImg.SceneActor->GetProperty()->SetAmbientColor(color);
+                    SceneAndImg.SceneActor->GetProperty()->SetDiffuseColor(color);
+                }
 
                 ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
@@ -273,8 +299,33 @@ int main(int argc, char* argv[])
                 }
                 ImGui::Unindent(rightIndent);
 
+                ImGui::Dummy(ImVec2(0.0f, 20.0f));
+                
+                // label truncated / occluded
+                ImGui::Checkbox("Truncated", &truncated);
+                ImGui::SameLine();
+                ImGui::Checkbox("Occluded", &occluded);
 
-                // TODO: save camera info
+                ImGui::Dummy(ImVec2(0.0f, 20.0f));
+
+                // project mesh to image and lock the image data
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 1.0f, 0.3f, 0.4f, 1.0f });
+                if (ImGui::Button("Project Mesh To Image And Lock"))
+                {
+                    // TODO: combine the current background image data with the scene mesh model projection
+                    // maybe project the bounding box or silhouette?
+                    //ChangeTheBackgroundImage(SceneAndImg, GetScreenShotImageData(SceneAndImg));
+                }
+                ImGui::PopStyleColor(1);
+
+                ImGui::Dummy(ImVec2(0.0f, 30.0f));
+
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 1.0f, 0.5f, 0.0f, 1.0f });
+                if (ImGui::Button("Save Metrics"))
+                {
+                    // TODO: save camera info
+                }
+                ImGui::PopStyleColor(1);
             }
         }
         ImGui::End();
