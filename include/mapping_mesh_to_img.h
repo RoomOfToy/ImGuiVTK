@@ -13,7 +13,7 @@
 #include <vtkCommand.h>
 #include <vtkRendererCollection.h>
 #include <vtkWindowToImageFilter.h>
-#include <iostream>
+#include <vtkCenterOfMass.h>
 
 
 // two viewports: xmin, ymin, xmax, ymax [0, 0, 1, 0.5], [0, 0.5, 1, 1]
@@ -200,4 +200,13 @@ vtkSmartPointer<vtkImageData> GetScreenShotImageData(SceneAndBackground& SceneAn
     windowToImageFilter->Update();
     
     return windowToImageFilter->GetOutput();
+}
+
+void GetCenterOfMass(vtkSmartPointer<vtkPolyData> meshData, double* center)
+{
+    vtkNew<vtkCenterOfMass> centerOfMassFilter;
+    centerOfMassFilter->SetInputData(meshData);
+    centerOfMassFilter->SetUseScalarsAsWeights(false);
+    centerOfMassFilter->Update();
+    centerOfMassFilter->GetCenter(center);
 }

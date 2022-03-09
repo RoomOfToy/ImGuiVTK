@@ -76,6 +76,7 @@ set(ImGuiVTK_SRC_Files
   ${PROJECT_SOURCE_DIR}/include/imgui/imgui_draw.cpp
   ${PROJECT_SOURCE_DIR}/include/imgui/imgui_tables.cpp
   ${PROJECT_SOURCE_DIR}/include/imgui/imgui_widgets.cpp
+  ${PROJECT_SOURCE_DIR}/include/imgui/imgui_stdlib.cpp
   ${PROJECT_SOURCE_DIR}/include/imgui/backends/imgui_impl_glfw.cpp
   ${PROJECT_SOURCE_DIR}/include/imgui/backends/imgui_impl_opengl3.cpp
 )

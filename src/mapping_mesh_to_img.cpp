@@ -4,6 +4,7 @@
 // use Adobe spectrum ImGUI fork
 #include "imgui_spectrum.h"  // use light theme in default
 #include "imgui.h"
+#include "imgui_stdlib.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "ImGuiVTK.h"
@@ -11,7 +12,10 @@
 #include "load3d.h"
 #include "loadimg.h"
 #include "mapping_mesh_to_img.h"
+#include "metric.h"
 #include <stdio.h>
+
+#include <filesystem>
 
 #include <glad/glad.h>
 
@@ -36,7 +40,7 @@ int main(int argc, char* argv[])
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 
     // Create window with graphics context
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Annotation Tool", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1920, 1080, "Annotation Tool", NULL, NULL);
     if (window == NULL)
         return 1;
     glfwMakeContextCurrent(window);
@@ -94,6 +98,11 @@ int main(int argc, char* argv[])
     float model_opacity = 0.5;
     ImVec4 model_color = ImVec4(0.00f, 0.00f, 1.00f, 1.00f);
     bool truncated = false, occluded = false;
+
+    std::set<std::string> LockedMeshes;
+    std::string OutputFilename{};
+    std::string ModelCategory{};
+    Metrics CurrentMetrics;
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -166,6 +175,13 @@ int main(int argc, char* argv[])
             // first let the scene camera follows the model camera
             SceneAndImg.SceneRenderer->SetActiveCamera(instance.Renderer->GetActiveCamera());
             imgFileDialog.ClearSelected();
+
+            auto path = std::filesystem::path(ImgFileName);
+            CurrentMetrics.image_name = path.stem().string();
+            CurrentMetrics.image_path = ImgFileName;
+            CurrentMetrics.metrics.clear();
+            LockedMeshes.clear();
+            OutputFilename = path.replace_extension(".txt").string();
         }
 
         if (ImGui::Begin("Overlay"))
@@ -306,24 +322,69 @@ int main(int argc, char* argv[])
                 ImGui::SameLine();
                 ImGui::Checkbox("Occluded", &occluded);
 
+                ImGui::Text("Model Category:");
+                ImGui::InputTextWithHint("###category", "e.g. Mouse", &ModelCategory);
+
                 ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
                 // project mesh to image and lock the image data
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 1.0f, 0.3f, 0.4f, 1.0f });
-                if (ImGui::Button("Project Mesh To Image And Lock"))
+                if (ImGui::Button("Save Current Model Metrics"))
                 {
                     // TODO: combine the current background image data with the scene mesh model projection
                     // maybe project the bounding box or silhouette?
                     //ChangeTheBackgroundImage(SceneAndImg, GetScreenShotImageData(SceneAndImg));
+
+                    auto model_name = std::filesystem::path(MeshFileName).stem().string();
+
+                    double camera_position[3];
+                    double camera_focal_point[3];
+                    double camera_view_up[3];
+                    double camera_projection_direction[3];
+                    auto cam = SceneAndImg.SceneRenderer->GetActiveCamera();
+                    cam->GetPosition(camera_position);
+                    cam->GetFocalPoint(camera_focal_point);
+                    cam->GetViewUp(camera_view_up);
+                    cam->GetDirectionOfProjection(camera_projection_direction);
+                    double inplane_rotation = cam->GetRoll();
+
+                    double model_center_of_mass[3];
+                    GetCenterOfMass(PolyData, model_center_of_mass);
+
+                    CurrentMetrics.metrics.push_back(Metric{
+                        model_name,
+                        ModelCategory,
+                        truncated,
+                        occluded,
+                        {camera_position[0], camera_position[1], camera_position[2]},
+                        {camera_focal_point[0], camera_focal_point[1], camera_focal_point[2]},
+                        {camera_view_up[0], camera_view_up[1], camera_view_up[2]},
+                        {camera_projection_direction[0], camera_projection_direction[1], camera_projection_direction[2]},
+                        inplane_rotation,
+                        {model_center_of_mass[0], model_center_of_mass[1], model_center_of_mass[2]},
+                        MeshFileName
+                    });
+                    LockedMeshes.insert(model_name);
                 }
                 ImGui::PopStyleColor(1);
 
+                if (ImGui::BeginListBox("Saved Models"))
+                {
+                    for (auto const& m : LockedMeshes)
+                    {
+                        ImGui::Selectable(m.c_str(), false);
+                    }
+                    ImGui::EndListBox();
+                }
+
                 ImGui::Dummy(ImVec2(0.0f, 30.0f));
 
+                ImGui::Text("Ouput Filename:");
+                ImGui::InputText("###filename", &OutputFilename);
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 1.0f, 0.5f, 0.0f, 1.0f });
-                if (ImGui::Button("Save Metrics"))
+                if (ImGui::Button("Write Metrics To File"))
                 {
-                    // TODO: save camera info
+                    WriteMetricsToFile(OutputFilename, CurrentMetrics);
                 }
                 ImGui::PopStyleColor(1);
             }
