@@ -331,9 +331,9 @@ int main(int argc, char* argv[])
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 1.0f, 0.3f, 0.4f, 1.0f });
                 if (ImGui::Button("Save Current Model Metrics"))
                 {
-                    // TODO: combine the current background image data with the scene mesh model projection
+                    // TODO: better way to combine the current background image data with the scene mesh model projection
                     // maybe project the bounding box or silhouette?
-                    //ChangeTheBackgroundImage(SceneAndImg, GetScreenShotImageData(SceneAndImg));
+                    ChangeTheBackgroundImage(SceneAndImg, GetScreenShotImageData(SceneAndImg));
 
                     auto model_name = std::filesystem::path(MeshFileName).stem().string();
 

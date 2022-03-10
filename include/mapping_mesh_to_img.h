@@ -184,7 +184,7 @@ void ChangeTheBackgroundImage(SceneAndBackground& SceneAndImg, vtkSmartPointer<v
 }
 
 
-// this way not good, since the screenshot resolution is much lower than the original one, after several trials, the image will become black...
+// this way not perfect, since the screenshot resolution is much lower than the original one
 vtkSmartPointer<vtkImageData> GetScreenShotImageData(SceneAndBackground& SceneAndImg)
 {
     auto renderWindow = SceneAndImg.BackgroundRenderer->GetRenderWindow();
@@ -194,9 +194,8 @@ vtkSmartPointer<vtkImageData> GetScreenShotImageData(SceneAndBackground& SceneAn
     windowToImageFilter->SetInput(renderWindow);
     windowToImageFilter->SetViewport(0, 0.5, 1, 1);  // only capture the scene
     windowToImageFilter->SetScale(1); // image quality
-    windowToImageFilter->SetInputBufferTypeToRGBA(); // also record the alpha
-                                                     // (transparency) channel
-    windowToImageFilter->ReadFrontBufferOff();       // read from the back buffer
+    windowToImageFilter->SetInputBufferTypeToRGB(); // without alpha channel, the black image problem will disappear
+    windowToImageFilter->ReadFrontBufferOn();       // read from the front buffer
     windowToImageFilter->Update();
     
     return windowToImageFilter->GetOutput();
