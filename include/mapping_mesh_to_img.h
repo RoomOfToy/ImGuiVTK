@@ -16,6 +16,16 @@
 #include <vtkCenterOfMass.h>
 
 
+void GetCenterOfMass(vtkSmartPointer<vtkPolyData> meshData, double* center)
+{
+    vtkNew<vtkCenterOfMass> centerOfMassFilter;
+    centerOfMassFilter->SetInputData(meshData);
+    centerOfMassFilter->SetUseScalarsAsWeights(false);
+    centerOfMassFilter->Update();
+    centerOfMassFilter->GetCenter(center);
+}
+
+
 // two viewports: xmin, ymin, xmax, ymax [0, 0, 1, 0.5], [0, 0.5, 1, 1]
 
 // render 0
@@ -41,6 +51,14 @@ void SetupModelRender(vtkSmartPointer<vtkRenderer> modelRenderer, vtkSmartPointe
         modelRenderer->RemoveActor(actors_collection->GetLastActor());
     // Add the new one
     modelRenderer->AddActor(meshActor);
+
+    // Set the camera focal point to mesh mass center
+    // Notice: should disable SHIFT + LEFT MOUSE move model event to avoid focal point change, use `int shift = 0` in `ImGuiVTK::ProcessEvents`
+    double mass_center[3];
+    GetCenterOfMass(meshData, mass_center);
+    auto camera = modelRenderer->GetActiveCamera();
+    camera->SetFocalPoint(mass_center);
+    camera->SetFreezeFocalPoint(true);
 
     // TODO: scale polydata to fit the renderer size
 
@@ -199,13 +217,4 @@ vtkSmartPointer<vtkImageData> GetScreenShotImageData(SceneAndBackground& SceneAn
     windowToImageFilter->Update();
     
     return windowToImageFilter->GetOutput();
-}
-
-void GetCenterOfMass(vtkSmartPointer<vtkPolyData> meshData, double* center)
-{
-    vtkNew<vtkCenterOfMass> centerOfMassFilter;
-    centerOfMassFilter->SetInputData(meshData);
-    centerOfMassFilter->SetUseScalarsAsWeights(false);
-    centerOfMassFilter->Update();
-    centerOfMassFilter->GetCenter(center);
 }

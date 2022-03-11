@@ -93,6 +93,8 @@ int main(int argc, char* argv[])
     bool MeshChanged = false;
 
     float inplane_rot_angle = 0, current_roll = 0;
+    float elevation = 0, current_elevation = 0;
+    float azimuth = 0, current_azimuth = 0;
     float zoom = 1, last_zoom = 1;
     float camera_move_resolution = 1, model_move_resolution = 1;
     float model_opacity = 0.5;
@@ -225,7 +227,7 @@ int main(int argc, char* argv[])
                 ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
                 // in-plane rotation
-                if (ImGui::SliderFloat("In-Plane Rotation Angle", &inplane_rot_angle, -180.0f, 180.0f))
+                if (ImGui::SliderFloat("In-Plane Rotation Angle", &inplane_rot_angle, -180.0f, 180.0f, "%.1f degrees"))
                 {
                     auto current_cam = SceneAndImg.SceneRenderer->GetActiveCamera();
                     current_cam->SetRoll(current_roll + inplane_rot_angle);
@@ -247,46 +249,69 @@ int main(int argc, char* argv[])
                 float upDownIndent = middle - 60; //middle - ImGui::GetFontSize() * strlen("Camera Up") / 2;
                 float rightIndent = middle * 2 - 60 * 2 - 10;
 
-                // camera move resolution
-                ImGui::SliderFloat("Camera Move Resolution", &camera_move_resolution, 0.1f, 2.0f);
+                // // camera move resolution
+                // ImGui::SliderFloat("Camera Move Resolution", &camera_move_resolution, 0.1f, 2.0f);
 
-                // camera up/down/left/right
-                ImGui::Indent(upDownIndent);
-                if (ImGui::Button("Camera Up", ImVec2(120, 30))) {
+                // // camera up/down/left/right (keep view up)
+                // ImGui::Indent(upDownIndent);
+                // if (ImGui::Button("Camera Up", ImVec2(120, 30))) {
+                //     auto current_cam = SceneAndImg.SceneRenderer->GetActiveCamera();
+                //     double pos[3];
+                //     current_cam->GetPosition(pos);
+                //     pos[1] += camera_move_resolution;
+                //     current_cam->SetPosition(pos);
+                // }
+                // ImGui::Unindent(upDownIndent);
+                // if (ImGui::Button("Camera Left", ImVec2(120, 30))) {
+                //     auto current_cam = SceneAndImg.SceneRenderer->GetActiveCamera();
+                //     double pos[3];
+                //     current_cam->GetPosition(pos);
+                //     pos[0] -= camera_move_resolution;
+                //     current_cam->SetPosition(pos);
+                // }
+                // ImGui::SameLine();
+                // ImGui::Indent(upDownIndent);
+                // if (ImGui::Button("Camera Down", ImVec2(120, 30))) {
+                //     auto current_cam = SceneAndImg.SceneRenderer->GetActiveCamera();
+                //     double pos[3];
+                //     current_cam->GetPosition(pos);
+                //     pos[1] -= camera_move_resolution;
+                //     current_cam->SetPosition(pos);
+                // }
+                // ImGui::Unindent(upDownIndent);
+                // ImGui::SameLine();
+                // ImGui::Indent(rightIndent);
+                // if (ImGui::Button("Camera Right", ImVec2(120, 30))) {
+                //     auto current_cam = SceneAndImg.SceneRenderer->GetActiveCamera();
+                //     double pos[3];
+                //     current_cam->GetPosition(pos);
+                //     pos[0] += camera_move_resolution;
+                //     current_cam->SetPosition(pos);
+                // }
+                // ImGui::Unindent(rightIndent);
+
+                // ImGui::Dummy(ImVec2(0.0f, 20.0f));
+
+                // elevation rotation (will change view up)
+                if (ImGui::SliderFloat("Elevation", &elevation, -180.0f, 180.0f, "%.1f degrees"))
+                {
                     auto current_cam = SceneAndImg.SceneRenderer->GetActiveCamera();
-                    double pos[3];
-                    current_cam->GetPosition(pos);
-                    pos[1] += camera_move_resolution;
-                    current_cam->SetPosition(pos);
+                    current_cam->Elevation(elevation - current_elevation);
+                    current_elevation = elevation;
+                    current_cam->OrthogonalizeViewUp();
+                    // double* p = current_cam->GetViewUp();
+                    // printf("%f, %f, %f\n", p[0], p[1], p[2]);
                 }
-                ImGui::Unindent(upDownIndent);
-                if (ImGui::Button("Camera Left", ImVec2(120, 30))) {
+
+                ImGui::Dummy(ImVec2(0.0f, 20.0f));
+
+                // azimuth rotation (not change view up)
+                if (ImGui::SliderFloat("Azimuth", &azimuth, -180.0f, 180.0f, "%.1f degrees"))
+                {
                     auto current_cam = SceneAndImg.SceneRenderer->GetActiveCamera();
-                    double pos[3];
-                    current_cam->GetPosition(pos);
-                    pos[0] -= camera_move_resolution;
-                    current_cam->SetPosition(pos);
+                    current_cam->Azimuth(azimuth - current_azimuth);
+                    current_azimuth = azimuth;
                 }
-                ImGui::SameLine();
-                ImGui::Indent(upDownIndent);
-                if (ImGui::Button("Camera Down", ImVec2(120, 30))) {
-                    auto current_cam = SceneAndImg.SceneRenderer->GetActiveCamera();
-                    double pos[3];
-                    current_cam->GetPosition(pos);
-                    pos[1] -= camera_move_resolution;
-                    current_cam->SetPosition(pos);
-                }
-                ImGui::Unindent(upDownIndent);
-                ImGui::SameLine();
-                ImGui::Indent(rightIndent);
-                if (ImGui::Button("Camera Right", ImVec2(120, 30))) {
-                    auto current_cam = SceneAndImg.SceneRenderer->GetActiveCamera();
-                    double pos[3];
-                    current_cam->GetPosition(pos);
-                    pos[0] += camera_move_resolution;
-                    current_cam->SetPosition(pos);
-                }
-                ImGui::Unindent(rightIndent);
 
                 ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
@@ -337,34 +362,26 @@ int main(int argc, char* argv[])
 
                     auto model_name = std::filesystem::path(MeshFileName).stem().string();
 
-                    double camera_position[3];
-                    double camera_focal_point[3];
-                    double camera_view_up[3];
-                    double camera_projection_direction[3];
                     auto cam = SceneAndImg.SceneRenderer->GetActiveCamera();
-                    cam->GetPosition(camera_position);
-                    cam->GetFocalPoint(camera_focal_point);
-                    cam->GetViewUp(camera_view_up);
-                    cam->GetDirectionOfProjection(camera_projection_direction);
-                    double inplane_rotation = cam->GetRoll();
-
-                    double model_center_of_mass[3];
-                    GetCenterOfMass(PolyData, model_center_of_mass);
+                    auto camera_parameters = GetCameraParameters(cam);
 
                     CurrentMetrics.metrics.push_back(Metric{
                         model_name,
                         ModelCategory,
                         truncated,
                         occluded,
-                        {camera_position[0], camera_position[1], camera_position[2]},
-                        {camera_focal_point[0], camera_focal_point[1], camera_focal_point[2]},
-                        {camera_view_up[0], camera_view_up[1], camera_view_up[2]},
-                        {camera_projection_direction[0], camera_projection_direction[1], camera_projection_direction[2]},
-                        inplane_rotation,
-                        {model_center_of_mass[0], model_center_of_mass[1], model_center_of_mass[2]},
+                        camera_parameters,
                         MeshFileName
                     });
                     LockedMeshes.insert(model_name);
+
+                    // debug (to verify the correctness of rotaion angles)
+                    // FIXME: is this debug way correct? is the camera parameters calculation way correct?
+                    // cam->SetViewUp(0, 1, 0);
+                    // cam->SetDistance(camera_parameters.distance);
+                    // cam->Elevation(camera_parameters.elevation);
+                    // cam->OrthogonalizeViewUp();
+                    // cam->Azimuth(camera_parameters.azimuth);
                 }
                 ImGui::PopStyleColor(1);
 
