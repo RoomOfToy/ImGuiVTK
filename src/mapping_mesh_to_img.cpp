@@ -27,6 +27,8 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
+void handle_key_press(vtkCamera* camera, vtkActor* model_actor, double* elevation, double* azimuth, float model_move_resolution);
+
 int main(int argc, char* argv[])
 {
     // Setup window
@@ -93,8 +95,8 @@ int main(int argc, char* argv[])
     bool MeshChanged = false;
 
     float inplane_rot_angle = 0, current_roll = 0;
-    float elevation = 0, current_elevation = 0;
-    float azimuth = 0, current_azimuth = 0;
+    float elevation = 0; double current_elevation = 0;
+    float azimuth = 0; double current_azimuth = 0;
     float zoom = 1, last_zoom = 1;
     float camera_move_resolution = 1, model_move_resolution = 1;
     float model_opacity = 0.5;
@@ -413,6 +415,10 @@ int main(int argc, char* argv[])
         instance.Render();
         ImGui::Render();
 
+        // Handle key press events
+        if (SceneAndImg.SceneRenderer != nullptr && SceneAndImg.SceneActor != nullptr)
+            handle_key_press(SceneAndImg.SceneRenderer->GetActiveCamera(), SceneAndImg.SceneActor, &current_elevation, &current_azimuth, model_move_resolution);
+
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
@@ -435,4 +441,56 @@ int main(int argc, char* argv[])
     glfwTerminate();
 
     return 0;
+}
+
+void handle_key_press(vtkCamera* camera, vtkActor* model_actor, double* elevation, double* azimuth, float model_move_resolution)
+{
+    //for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) if (ImGui::IsKeyPressed(i)) { std::cout << i << '\n'; }
+    // GLFW keys layout: https://www.glfw.org/docs/3.3/group__keys.html
+    const int keys[]{ 87, 65, 83, 68, 265, 263, 264, 262 };
+    for (auto key : keys)
+    {
+        if (ImGui::IsKeyPressed(key))
+        {
+            if (key == 265)  // Up
+            {
+                camera->Elevation(1);
+                *elevation = *elevation + 1;
+                camera->OrthogonalizeViewUp();
+            }
+            if (key == 264)  // Down
+            {
+                camera->Elevation(-1);
+                *elevation = *elevation - 1;
+                camera->OrthogonalizeViewUp();
+            }
+            if (key == 263)  // Left
+            {
+                camera->Azimuth(-1);
+                *azimuth = *azimuth - 1;
+            }
+            if (key == 262)  // Right
+            {
+                camera->Azimuth(1);
+                *azimuth = *azimuth + 1;
+            }
+
+            if (key == 87)  // w
+            {
+                model_actor->AddPosition(0, model_move_resolution, 0);
+            }
+            if (key == 83)  // s
+            {
+                model_actor->AddPosition(0, -model_move_resolution, 0);
+            }
+            if (key == 65)  // a
+            {
+                model_actor->AddPosition(-model_move_resolution, 0, 0);
+            }
+            if (key == 68)  // d
+            {
+                model_actor->AddPosition(model_move_resolution, 0, 0);
+            }
+        }
+    }
 }
