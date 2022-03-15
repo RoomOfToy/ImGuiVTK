@@ -326,21 +326,25 @@ int main(int argc, char* argv[])
                     SceneAndImg.SceneActor->AddPosition(0, model_move_resolution, 0);
                 }
                 ImGui::Unindent(upDownIndent);
+                if (ImGui::IsItemActive()) SceneAndImg.SceneActor->AddPosition(0, model_move_resolution, 0);  // hold button
                 if (ImGui::Button("Model Left", ImVec2(120, 30))) {
                     SceneAndImg.SceneActor->AddPosition(-model_move_resolution, 0, 0);
                 }
+                if (ImGui::IsItemActive()) SceneAndImg.SceneActor->AddPosition(-model_move_resolution, 0, 0);  // hold button
                 ImGui::SameLine();
                 ImGui::Indent(upDownIndent);
                 if (ImGui::Button("Model Down", ImVec2(120, 30))) {
                     SceneAndImg.SceneActor->AddPosition(0, -model_move_resolution, 0);
                 }
                 ImGui::Unindent(upDownIndent);
+                if (ImGui::IsItemActive()) SceneAndImg.SceneActor->AddPosition(0, -model_move_resolution, 0);  // hold button
                 ImGui::SameLine();
                 ImGui::Indent(rightIndent);
                 if (ImGui::Button("Model Right", ImVec2(120, 30))) {
                     SceneAndImg.SceneActor->AddPosition(model_move_resolution, 0, 0);
                 }
                 ImGui::Unindent(rightIndent);
+                if (ImGui::IsItemActive()) SceneAndImg.SceneActor->AddPosition(model_move_resolution, 0, 0);  // hold button
 
                 ImGui::Dummy(ImVec2(0.0f, 20.0f));
                 
