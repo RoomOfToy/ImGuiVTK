@@ -383,11 +383,12 @@ int main(int argc, char* argv[])
 
                     // debug (to verify the correctness of rotaion angles)
                     // FIXME: is this debug way correct? is the camera parameters calculation way correct?
-                    // cam->SetViewUp(0, 1, 0);
-                    // cam->SetDistance(camera_parameters.distance);
-                    // cam->Elevation(camera_parameters.elevation);
-                    // cam->OrthogonalizeViewUp();
-                    // cam->Azimuth(camera_parameters.azimuth);
+                    double cam_pos[3];
+                    GetCameraPosition(camera_parameters.azimuth, camera_parameters.elevation, camera_parameters.distance, cam_pos);
+                    cam->SetPosition(cam_pos);
+                    cam->Elevation(-camera_parameters.elevation);
+                    cam->OrthogonalizeViewUp();
+                    cam->Azimuth(-camera_parameters.azimuth);
                 }
                 ImGui::PopStyleColor(1);
 

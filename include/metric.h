@@ -31,32 +31,12 @@ CameraParameters GetCameraParameters(vtkCamera* camera)
 
     const double PI = 3.141592653589793238463;
 
-    double elevation = asin(vy / distance) * 180.0 / PI;  // asin(v.y / distance)
+    double elevation = atan2(vz, sqrt(vx * vx + vy * vy)) * 180.0 / PI;  // [-180, 180]
 
-    double azimuth = 0;
-    
-    if (abs(vz) < 0.00001)
-    {
-        // Special case
-        if (vx > 0)
-        {
-            azimuth = PI/2.0;
-        }
-        else if (vx < 0)
-        {
-            azimuth = -PI/2.0;
-        }
-        else
-        {
-            azimuth = 0.0;
-        }
-    }
-    else
-    {
-        azimuth = atan2(vx, vz);
-    }
+    double azimuth = atan2(vy, vx) * 180.0 / PI;  // [-180, 180]
 
-    azimuth *= 180.0 / PI;
+    // std::cout << '[' << vx << ", " << vy << ", " << vz << "]; "
+    //           << '[' << azimuth << ", " << elevation << ", " << distance << "]\n";
 
     return CameraParameters{
         azimuth,
@@ -65,6 +45,13 @@ CameraParameters GetCameraParameters(vtkCamera* camera)
         inplane_rotation,
         { camera_focal_point[0], camera_focal_point[1], camera_focal_point[2] }
     };
+}
+
+void GetCameraPosition(double azimuth, double elevation, double distance, double cam_pos[3])
+{
+    cam_pos[0] = distance * cos(elevation) * cos(azimuth);
+    cam_pos[1] = distance * cos(elevation) * sin(azimuth);
+    cam_pos[2] = distance * sin(elevation);
 }
 
 struct Metric
