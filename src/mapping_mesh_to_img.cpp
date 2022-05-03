@@ -108,6 +108,8 @@ int main(int argc, char* argv[])
     std::string ModelCategory{};
     Metrics CurrentMetrics;
 
+    double original_scene_actor_center[3]{0, 0, 0}, final_scene_actor_center[3]{0, 0, 0};
+
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -152,7 +154,10 @@ int main(int argc, char* argv[])
                 SetupModelRender(instance.Renderer, PolyData);
                 // replace scene mesh only if the scene has been setup
                 if (SceneAndImg.SceneActor != nullptr)
+                {
                     ChangeTheModel(SceneAndImg, PolyData);
+                    std::memcpy(&original_scene_actor_center, SceneAndImg.SceneActor->GetCenter(), 3 * sizeof(double));
+                }
             }
             // TODO: setup two renderers on ImGuiVTK instance.init() and make change mesh / image easier (one props for one)
             meshFileDialog.ClearSelected();
@@ -180,6 +185,7 @@ int main(int argc, char* argv[])
             SceneAndImg.SceneRenderer->SetActiveCamera(instance.Renderer->GetActiveCamera());
             imgFileDialog.ClearSelected();
 
+            std::memcpy(&original_scene_actor_center, SceneAndImg.SceneActor->GetCenter(), 3 * sizeof(double));
             auto path = std::filesystem::path(ImgFileName);
             CurrentMetrics.image_name = path.stem().string();
             CurrentMetrics.image_path = ImgFileName;
@@ -250,49 +256,6 @@ int main(int argc, char* argv[])
                 float middle = ImGui::GetWindowContentRegionMax().x / 2;
                 float upDownIndent = middle - 60; //middle - ImGui::GetFontSize() * strlen("Camera Up") / 2;
                 float rightIndent = middle * 2 - 60 * 2 - 10;
-
-                // // camera move resolution
-                // ImGui::SliderFloat("Camera Move Resolution", &camera_move_resolution, 0.1f, 2.0f);
-
-                // // camera up/down/left/right (keep view up)
-                // ImGui::Indent(upDownIndent);
-                // if (ImGui::Button("Camera Up", ImVec2(120, 30))) {
-                //     auto current_cam = SceneAndImg.SceneRenderer->GetActiveCamera();
-                //     double pos[3];
-                //     current_cam->GetPosition(pos);
-                //     pos[1] += camera_move_resolution;
-                //     current_cam->SetPosition(pos);
-                // }
-                // ImGui::Unindent(upDownIndent);
-                // if (ImGui::Button("Camera Left", ImVec2(120, 30))) {
-                //     auto current_cam = SceneAndImg.SceneRenderer->GetActiveCamera();
-                //     double pos[3];
-                //     current_cam->GetPosition(pos);
-                //     pos[0] -= camera_move_resolution;
-                //     current_cam->SetPosition(pos);
-                // }
-                // ImGui::SameLine();
-                // ImGui::Indent(upDownIndent);
-                // if (ImGui::Button("Camera Down", ImVec2(120, 30))) {
-                //     auto current_cam = SceneAndImg.SceneRenderer->GetActiveCamera();
-                //     double pos[3];
-                //     current_cam->GetPosition(pos);
-                //     pos[1] -= camera_move_resolution;
-                //     current_cam->SetPosition(pos);
-                // }
-                // ImGui::Unindent(upDownIndent);
-                // ImGui::SameLine();
-                // ImGui::Indent(rightIndent);
-                // if (ImGui::Button("Camera Right", ImVec2(120, 30))) {
-                //     auto current_cam = SceneAndImg.SceneRenderer->GetActiveCamera();
-                //     double pos[3];
-                //     current_cam->GetPosition(pos);
-                //     pos[0] += camera_move_resolution;
-                //     current_cam->SetPosition(pos);
-                // }
-                // ImGui::Unindent(rightIndent);
-
-                // ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
                 // elevation rotation (will change view up)
                 if (ImGui::SliderFloat("Elevation", &elevation, -180.0f, 180.0f, "%.1f degrees"))
@@ -366,10 +329,13 @@ int main(int argc, char* argv[])
                     // maybe project the bounding box or silhouette?
                     ChangeTheBackgroundImage(SceneAndImg, GetScreenShotImageData(SceneAndImg));
 
-                    auto model_name = std::filesystem::path(MeshFileName).stem().string();
-
+                    std::memcpy(&final_scene_actor_center, SceneAndImg.SceneActor->GetCenter(), 3 * sizeof(double));
+                    double scene_movement[3] = { final_scene_actor_center[0] - original_scene_actor_center[0], 
+                                                 final_scene_actor_center[1] - original_scene_actor_center[1], 
+                                                 final_scene_actor_center[2] - original_scene_actor_center[2] };
                     auto cam = SceneAndImg.SceneRenderer->GetActiveCamera();
-                    auto camera_parameters = GetCameraParameters(cam);
+                    auto camera_parameters = GetCameraParameters(SceneAndImg.SceneRenderer, scene_movement, ImgData);
+                    auto model_name = std::filesystem::path(MeshFileName).stem().string();
 
                     CurrentMetrics.metrics.push_back(Metric{
                         model_name,
