@@ -105,8 +105,8 @@ void ImGuiVTK::ProcessEvents() {
 
     double xpos = static_cast<double>(io.MousePos[0]) - static_cast<double>(ImGui::GetWindowPos().x);
     double ypos = static_cast<double>(io.MousePos[1]) - static_cast<double>(ImGui::GetWindowPos().y);
-    int ctrl = static_cast<int>(io.KeyCtrl);
-    int shift = static_cast<int>(io.KeyShift);
+    int ctrl = Ctrl ? static_cast<int>(io.KeyCtrl) : 0;
+    int shift = Shift ? static_cast<int>(io.KeyShift) : 0;
     bool dclick = io.MouseDoubleClicked[0] || io.MouseDoubleClicked[1] || io.MouseDoubleClicked[2];
 
     Interactor->SetEventInformationFlipY(xpos, ypos, ctrl, shift, dclick);
@@ -179,3 +179,6 @@ void ImGuiVTK::RemoveProps(vtkSmartPointer<vtkPropCollection> props) {
         Renderer->RemoveActor(prop);
     }
 }
+
+void ImGuiVTK::SetCtrl(bool ctrl) { Ctrl = ctrl; }
+void ImGuiVTK::SetShift(bool shift) { Shift = shift; }

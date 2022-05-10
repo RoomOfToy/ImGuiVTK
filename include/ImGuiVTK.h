@@ -29,6 +29,9 @@ public:
 	void RemoveProp(vtkSmartPointer<vtkProp> prop);
 	void RemoveProps(vtkSmartPointer<vtkPropCollection> props);
 
+	void SetCtrl(bool ctrl);
+	void SetShift(bool shift);
+
 private:
 	void ProcessEvents();
 
@@ -37,13 +40,17 @@ public:
 	vtkSmartPointer<vtkGenericRenderWindowInteractor> Interactor = nullptr;
 	vtkSmartPointer<vtkInteractorStyleTrackballCamera> InteractorStyle = nullptr;
 	vtkSmartPointer<vtkRenderer> Renderer = nullptr;
-	int ViewportSize[2] = { 640, 480 };
-	std::string Title = "ModelView";
-	bool Show = true;
 	static IsCurrentCallbackFnType IsCurrentCallbackFn;
 
 private:
 	GLuint FBOHdl = 0;
 	GLuint RBOHdl = 0;
 	GLuint TexHdl = 0;
+
+	int ViewportSize[2] = { 640, 480 };
+	std::string Title = "ModelView";
+	bool Show = true;
+
+	bool Ctrl = false;   // disabled
+	bool Shift = false;  // disbaled
 };

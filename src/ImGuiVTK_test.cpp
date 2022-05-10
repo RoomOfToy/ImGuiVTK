@@ -1,3 +1,8 @@
+#define _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING  // vtk only targets C++11, so disable this iterator warning
+
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>  // to eliminate warning C4005: 'APIENTRY' : macro redefinition, glad.h should be included after Windows.h
+
 #include <vtkSmartPointer.h>
 #include <vtkActor.h>
 
@@ -67,6 +72,8 @@ int main(int argc, char* argv[])
     ImGuiVTK instance;
     instance.Interactor = interactor;
     instance.Init();
+    instance.SetCtrl(true);  // enable ctrl
+    instance.SetShift(true);  // enable shift
     widget->SetEnabled(1);
     widget->InteractiveOn();
     auto props = vtkSmartPointer<vtkPropCollection>::New();
