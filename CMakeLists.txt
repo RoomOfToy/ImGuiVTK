@@ -62,6 +62,11 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/include/imgui-filebrowser
 )
 
+# json
+include_directories(
+  ${PROJECT_SOURCE_DIR}/include/json
+)
+
 # custom header
 include_directories(
   ${PROJECT_SOURCE_DIR}/include
@@ -105,6 +110,7 @@ vtk_module_autoinit(
 
 add_executable(MappingMeshToImg 
   ${PROJECT_SOURCE_DIR}/src/mapping_mesh_to_img.cpp
+  ${PROJECT_SOURCE_DIR}/src/metric.cpp
   ${ImGuiVTK_SRC_Files}
 )
 target_link_libraries (

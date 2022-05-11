@@ -35,6 +35,9 @@ void handle_key_press(vtkCamera* camera, vtkActor* model_actor, double* elevatio
 int main(int argc, char* argv[])
 {
 #pragma region SetUp
+    // Disable vtk output window
+    //vtkObject::GlobalWarningDisplayOff();
+
     // Create window with graphics context
     GLFWwindow* window = create_glfw_window();
 
@@ -333,7 +336,7 @@ int main(int argc, char* argv[])
                                                  final_scene_actor_center[1] - original_scene_actor_center[1], 
                                                  final_scene_actor_center[2] - original_scene_actor_center[2] };
                     auto cam = SceneAndImg.SceneRenderer->GetActiveCamera();
-                    auto camera_parameters = GetCameraParameters(SceneAndImg.SceneRenderer, scene_movement, ImgData);
+                    auto camera_parameters = GetCameraParameters(SceneAndImg.SceneRenderer, scene_movement, ImgData->GetExtent());
                     auto model_name = std::filesystem::path(MeshFileName).stem().string();
 
                     CurrentMetrics.metrics.push_back(Metric{
